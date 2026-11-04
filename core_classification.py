@@ -3,6 +3,7 @@ import sys
 import cv2
 import shutil
 import numpy as np
+from PyQt6.QtCore import QObject, pyqtSignal
 from sklearn.cluster import HDBSCAN
 
 from insightface.app import FaceAnalysis
@@ -54,5 +55,13 @@ def move_files(labels, file_labels):
             except FileNotFoundError:
                 os.makedirs(front + f'/person_{label}/', exist_ok=True)
                 shutil.copy2(file_label, new_path)
-embeddings, file_labels = create_embeddings("/home/tymoteusz/Desktop/test_zdjecia")
-move_files(classify(embeddings), file_labels)
+class classify_wrapper(QObject):
+    finished = pyqtSignal()
+    def __init__(self):
+        self.path = ""
+        super().__init__()
+    def run(self):
+
+        embeddings, file_labels = create_embeddings(self.path)
+        move_files(classify(embeddings), file_labels)
+        self.finished.emit()
