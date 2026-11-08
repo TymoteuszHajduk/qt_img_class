@@ -1,6 +1,6 @@
 from PyQt6.QtCore import QSize, QDir, QUrl, QThread
 from PyQt6.QtWidgets import ( QWidget, QMainWindow, QPushButton,
-                              QHBoxLayout, QFileDialog, QListView, QVBoxLayout)
+                              QHBoxLayout, QFileDialog, QListView, QVBoxLayout, QMessageBox)
 from PyQt6.QtGui import QFileSystemModel, QDesktopServices
 from core_classification import classify_wrapper
 
@@ -25,16 +25,11 @@ class MainWindow(QMainWindow):
         self.process_button.clicked.connect(self.process_button_clicked)
         self.process_button.setEnabled(False)
 
-        #przycisk do przeniesienia sie o katalog wyżej
-        self.up_dir_button = QPushButton("Up")
-        self.up_dir_button.clicked.connect(self.up_dir_button_clicked)
-
 
         #layout górnego paska
         top_bar_layout = QHBoxLayout()
         top_bar_layout.addWidget(self.path_input_button)
         top_bar_layout.addWidget(self.process_button)
-
         self.fs_model = QFileSystemModel(self)
         self.dir_view = QListView(self)
         self.dir_view.setModel(self.fs_model)
@@ -68,21 +63,23 @@ class MainWindow(QMainWindow):
             root_index = self.fs_model.setRootPath(self.folder_path)
             self.dir_view.setRootIndex(root_index)
             self.classifier.path = self.folder_path
+            print(self.folder_path)
     def process_button_clicked(self):
         self.objThread = QThread()
         self.classifier.moveToThread(self.objThread)
         self.classifier.finished.connect(self.objThread.quit)
+        self.classifier.no_faces.connect(self.show_no_faces_warning)
         self.objThread.started.connect(self.classifier.run)
         self.objThread.start()
     def item_double_clicked(self, index):
         if self.fs_model.isDir(index):
             self.dir_view.setRootIndex(index)
-            self.up_dir_button.setEnabled(True)
 
 
         else:
             file_path = self.fs_model.filePath(index)
             print(f"Opening image: {file_path}")
             QDesktopServices.openUrl(QUrl.fromLocalFile(file_path))
-    def up_dir_button_clicked(self):
-        self.dir_view.setRootIndex()
+    def show_no_faces_warning(self):
+        QMessageBox.warning(self, "No Faces Found",
+                            "No faces were detected in any of the images in the selected folder.")

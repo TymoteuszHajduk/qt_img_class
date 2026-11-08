@@ -32,6 +32,9 @@ def create_embeddings(folder_path):
             embeddings.append(face.embedding)
             file_labels.append(filepath)
     print(f'type of embeddings: {type(embeddings)}')
+    if not embeddings:
+        print("No faces found in any image.")
+        return np.array([], dtype=np.float32).reshape(0, 512), file_labels
     print(f'type of embeddings elements: {type(embeddings[0])}')
     embeddings_matrix = np.array(embeddings, dtype=np.float32)
     return embeddings_matrix, file_labels
@@ -57,11 +60,17 @@ def move_files(labels, file_labels):
                 shutil.copy2(file_label, new_path)
 class classify_wrapper(QObject):
     finished = pyqtSignal()
+    no_faces = pyqtSignal()
     def __init__(self):
         self.path = ""
         super().__init__()
     def run(self):
 
         embeddings, file_labels = create_embeddings(self.path)
+        if embeddings.size == 0:
+            print("No faces detected — nothing to classify.")
+            self.no_faces.emit()
+            self.finished.emit()
+            return
         move_files(classify(embeddings), file_labels)
         self.finished.emit()
